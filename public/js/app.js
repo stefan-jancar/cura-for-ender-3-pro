@@ -300,7 +300,7 @@ function resultHtml(j) {
   return `<div class="summary">${stats.map(([b, s]) => `<div class="stat"><b>${b}</b><span>${s}</span></div>`).join('')}</div>
     ${notes ? `<ul class="notes">${notes}</ul>` : ''}
     <div class="plates">${plateCards}</div>
-    ${profiles.length ? `<div class="extra-files"><span class="muted">Profil pre Cura:</span>${profiles.map((f) => `<button class="btn small" data-act="get" data-name="${esc(f.name)}">${esc(f.name.replace(/^.*?_(?=[A-Z]{3,4})/, ''))}</button>`).join('')}</div>` : ''}`;
+    ${profiles.length ? `<div class="extra-files"><span class="muted">Profil pre Cura:</span>${profiles.map((f) => `<button class="btn small" data-act="${desktop ? 'save' : 'get'}" data-name="${esc(f.name)}">${esc(f.name.replace(/^.*?_(?=[A-Z]{3,4})/, ''))}</button>`).join('')}</div>` : ''}`;
 }
 
 function fileButtons(j, f, primary) {

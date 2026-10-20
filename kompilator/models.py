@@ -195,7 +195,7 @@ def load_3mf(data: bytes, filename: str) -> list[Part]:
         F = np.vstack([c[1] + o for c, o in zip(chunks, offs)])
         mesh = trimesh.Trimesh(V, F, process=True)
         name = info.get("name") or prusa.get(oid) or names_in_model.get(oid) or f"{Path(filename).stem}_{i + 1}"
-        name = re.sub(r"\.(stl|obj|3mf|step)$", "", name, flags=re.I)
+        name = re.sub(r"\.(stl|obj|3mf|step)(_\w{1,3})?$", "", name, flags=re.I).strip()
         src = filename
         if meta and oid in meta["plates"]:
             src += f" (pôvodná platňa {meta['plates'][oid]})"
