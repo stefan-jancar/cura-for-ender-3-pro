@@ -1,0 +1,156 @@
+<!doctype html>
+<html lang="sk">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Kompilátor Cura</title>
+<meta name="description" content="Prekompiluje 3D modely z internetu pre Creality Ender-3 Pro – rozdelí ich na podložku a nareže v Cure.">
+<meta name="theme-color" content="#0b0d12">
+<link rel="manifest" href="/manifest.webmanifest">
+<link rel="icon" href="/assets/icons/icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="/assets/icons/icon-192.png">
+<link rel="stylesheet" href="/css/app.css?v=1">
+</head>
+<body>
+<header class="top">
+  <div class="brand">
+    <img src="/assets/icons/icon.svg" alt="" width="34" height="34">
+    <div>
+      <h1>Kompilátor Cura</h1>
+      <p>pre Creality Ender-3 Pro</p>
+    </div>
+  </div>
+  <div class="top-right">
+    <span id="status" class="pill">…</span>
+    <button id="btn-settings" class="icon-btn" title="Nastavenia" aria-label="Nastavenia" hidden>
+      <svg viewBox="0 0 24 24" width="20" height="20"><path fill="currentColor" d="M19.4 13a7.5 7.5 0 0 0 0-2l2-1.6-2-3.4-2.4 1a7.6 7.6 0 0 0-1.7-1L15 3.5h-4L10.6 6a7.6 7.6 0 0 0-1.7 1l-2.4-1-2 3.4 2 1.6a7.5 7.5 0 0 0 0 2l-2 1.6 2 3.4 2.4-1a7.6 7.6 0 0 0 1.7 1l.4 2.5h4l.4-2.5a7.6 7.6 0 0 0 1.7-1l2.4 1 2-3.4zM13 15.5a3.5 3.5 0 1 1 0-7 3.5 3.5 0 0 1 0 7z" transform="translate(-1 0)"/></svg>
+    </button>
+  </div>
+</header>
+
+<main id="app">
+  <!-- prihlásenie (web / mobil) -->
+  <section id="view-login" class="card narrow" hidden>
+    <h2>Prihlásenie</h2>
+    <p class="muted">Zadaj heslo aplikácie (premenná <code>APP_PASSWORD</code> na Verceli).</p>
+    <form id="login-form" class="stack">
+      <input id="login-pw" type="password" placeholder="Heslo" autocomplete="current-password" required>
+      <button class="btn primary" type="submit">Prihlásiť</button>
+      <p id="login-err" class="err" hidden></p>
+    </form>
+  </section>
+
+  <!-- hlavná obrazovka -->
+  <section id="view-main" hidden>
+    <form id="new-job" class="card">
+      <div class="card-head">
+        <h2>Nový model</h2>
+        <div class="seg" role="tablist">
+          <button type="button" class="on" data-src="url">Odkaz</button>
+          <button type="button" data-src="file">Súbor</button>
+        </div>
+      </div>
+
+      <div data-pane="url" class="stack">
+        <div class="row-input">
+          <input id="url" type="url" inputmode="url" placeholder="https://www.printables.com/model/… alebo priamy odkaz na .stl / .3mf / .zip">
+          <button type="button" id="btn-paste" class="btn ghost" title="Vložiť zo schránky">Vložiť</button>
+        </div>
+        <p class="hint">Podporované: Printables, Thingiverse, priame odkazy na STL, 3MF (aj projekty Bambu, Orca, Prusa), OBJ a ZIP.
+          MakerWorld a Cults vyžadujú prihlásenie – súbor stiahni a nahraj cez „Súbor“.</p>
+      </div>
+
+      <div data-pane="file" class="stack" hidden>
+        <label id="drop" class="drop">
+          <input id="files" type="file" multiple accept=".stl,.3mf,.obj,.zip">
+          <svg viewBox="0 0 24 24" width="30" height="30"><path fill="currentColor" d="M12 3l5 5h-3v6h-4V8H7zm-7 14h14v4H5z"/></svg>
+          <span id="drop-text">Pretiahni sem súbory alebo klikni<br><small>STL · 3MF · OBJ · ZIP</small></span>
+        </label>
+      </div>
+
+      <input id="title" type="text" maxlength="80" placeholder="Názov (nepovinné)">
+
+      <div class="opts">
+        <div class="opt">
+          <span class="label">Materiál</span>
+          <div class="chips" data-opt="material"></div>
+        </div>
+        <div class="opt">
+          <span class="label">Kvalita</span>
+          <div class="chips" data-opt="quality"></div>
+        </div>
+        <div class="opt">
+          <span class="label">Podpery</span>
+          <div class="chips" data-opt="supports">
+            <button type="button" data-v="auto">Auto</button><button type="button" data-v="on">Áno</button><button type="button" data-v="off">Nie</button>
+          </div>
+        </div>
+        <div class="opt">
+          <span class="label">Prilnavosť</span>
+          <div class="chips" data-opt="adhesion">
+            <button type="button" data-v="auto">Auto</button><button type="button" data-v="skirt">Skirt</button><button type="button" data-v="brim">Brim</button>
+          </div>
+        </div>
+        <label class="toggle">
+          <input type="checkbox" id="strong">
+          <span class="track"><span class="knob"></span></span>
+          <span>Pevnejší diel <small class="muted">(4 steny, 40 % výplň)</small></span>
+        </label>
+      </div>
+
+      <button id="btn-go" class="btn primary big" type="submit">
+        <span>Prekompilovať pre Ender-3 Pro</span>
+      </button>
+      <p id="form-err" class="err" hidden></p>
+    </form>
+
+    <div class="list-head">
+      <h2>Úlohy</h2>
+      <button id="btn-refresh" class="btn ghost small" type="button">Obnoviť</button>
+    </div>
+    <div id="jobs" class="jobs"></div>
+  </section>
+
+  <!-- nastavenia (PC) -->
+  <section id="view-settings" class="card narrow" hidden>
+    <div class="card-head">
+      <h2>Nastavenia</h2>
+      <button id="btn-back" class="btn ghost small" type="button">Späť</button>
+    </div>
+    <div class="set-block">
+      <h3>Cura</h3>
+      <p id="set-cura" class="muted"></p>
+    </div>
+    <div class="set-block">
+      <h3>Výstupný priečinok</h3>
+      <div class="row-input">
+        <input id="set-output" type="text" readonly>
+        <button id="btn-pick" class="btn ghost" type="button">Zmeniť</button>
+      </div>
+      <label class="toggle"><input type="checkbox" id="set-copy"><span class="track"><span class="knob"></span></span><span>Hotové G-code a 3MF kopírovať do tohto priečinka</span></label>
+    </div>
+    <div class="set-block">
+      <h3>SD karta</h3>
+      <p id="set-sd" class="muted"></p>
+    </div>
+    <div class="set-block">
+      <h3>Fronta z mobilu (Vercel)</h3>
+      <p class="muted">Keď je zapnutá, PC každých 15 s skontroluje, či si z mobilu neposlal nový model, a hneď ho spracuje.</p>
+      <div class="stack">
+        <input id="set-url" type="url" placeholder="https://kompilator-cura.vercel.app">
+        <div class="row-input">
+          <input id="set-pw" type="password" placeholder="Heslo aplikácie">
+          <button id="btn-cloud-login" class="btn" type="button">Prihlásiť</button>
+        </div>
+        <label class="toggle"><input type="checkbox" id="set-cloud"><span class="track"><span class="knob"></span></span><span>Spracovávať úlohy z mobilu</span></label>
+        <p id="set-cloud-status" class="muted"></p>
+        <p id="set-err" class="err" hidden></p>
+      </div>
+    </div>
+  </section>
+</main>
+
+<div id="toast" class="toast" hidden></div>
+<script type="module" src="/js/app.js?v=1"></script>
+</body>
+</html>

@@ -1,0 +1,64 @@
+name: Windows aplikácia
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - 'kompilator/**'
+      - 'desktop/**'
+      - 'server/**'
+      - 'public/**'
+      - 'tools/build_exe.py'
+      - 'requirements*.txt'
+      - '.github/workflows/windows.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+
+      - name: Inštalácia
+        run: pip install -r requirements-desktop.txt
+
+      - name: Testy jadra
+        run: python -m unittest discover -s tests -v
+
+      - name: PyInstaller
+        run: python tools/build_exe.py
+
+      - name: Inštalátor (Inno Setup)
+        shell: pwsh
+        run: |
+          $iscc = "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe"
+          if (-not (Test-Path $iscc)) { choco install innosetup -y --no-progress; }
+          & $iscc /DAppVersion=1.0.${{ github.run_number }} desktop\installer.iss
+          Compress-Archive -Path dist\KompilatorCura\* -DestinationPath dist\KompilatorCura-portable.zip
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: KompilatorCura-windows
+          path: |
+            dist/KompilatorCura-Setup.exe
+            dist/KompilatorCura-portable.zip
+
+      - name: Vydanie (release)
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: win-${{ github.run_number }}
+          name: Kompilátor Cura – Windows ${{ github.run_number }}
+          body: |
+            **KompilatorCura-Setup.exe** – inštalátor (odporúčané). Pridá ikonu na plochu a do Štart menu.
+            **KompilatorCura-portable.zip** – bez inštalácie: rozbaľ a spusti `KompilatorCura.exe`.
+            Potrebuje nainštalovanú UltiMaker Cura 5.12 (alebo novšiu 5.x).
+          files: |
+            dist/KompilatorCura-Setup.exe
+            dist/KompilatorCura-portable.zip

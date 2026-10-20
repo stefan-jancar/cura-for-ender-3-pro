@@ -1,0 +1,87 @@
+name: Android APK
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - 'mobile/**'
+      - '.github/workflows/android.yml'
+      - '.github/signing/**'
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: mobile
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+
+      - name: Inštalácia
+        run: npm install
+
+      - name: Konfigurácia (adresa aplikácie)
+        env:
+          APP_URL: ${{ vars.APP_URL }}
+        run: node configure.mjs
+
+      - name: Android projekt + ikony
+        run: |
+          npx cap add android
+          sed -i -E "s/versionCode [0-9]+/versionCode ${{ github.run_number }}/; s/versionName \"[^\"]*\"/versionName \"${{ github.run_number }}\"/" android/app/build.gradle
+          npx capacitor-assets generate --android
+          npx cap sync android
+
+      - name: Stály podpisový kľúč
+        env:
+          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+        run: |
+          if [ -z "$KEYSTORE_PASSWORD" ]; then
+            echo "::warning::Chýba tajný údaj KEYSTORE_PASSWORD – APK sa podpíše náhodným kľúčom a aktualizácia bude vyžadovať odinštalovanie."
+            exit 0
+          fi
+          openssl enc -d -aes-256-cbc -pbkdf2 -iter 200000 -in ../.github/signing/debug.keystore.enc -out "$RUNNER_TEMP/app.keystore" -pass env:KEYSTORE_PASSWORD
+          echo "APP_KEYSTORE=$RUNNER_TEMP/app.keystore" >> "$GITHUB_ENV"
+
+      - name: Build APK
+        run: |
+          cd android
+          chmod +x gradlew
+          ./gradlew assembleDebug --no-daemon
+          if [ -n "$APP_KEYSTORE" ]; then
+            BT=$(ls -d "$ANDROID_HOME"/build-tools/* | sort -V | tail -1)
+            ALIAS=$(keytool -list -keystore "$APP_KEYSTORE" -storepass android | awk -F, '/PrivateKeyEntry/ {print $1; exit}')
+            "$BT/apksigner" sign --ks "$APP_KEYSTORE" --ks-pass pass:android --key-pass pass:android --ks-key-alias "$ALIAS" \
+              --v4-signing-enabled false --out ../KompilatorCura.apk app/build/outputs/apk/debug/app-debug.apk
+          else
+            cp app/build/outputs/apk/debug/app-debug.apk ../KompilatorCura.apk
+          fi
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: KompilatorCura-apk
+          path: mobile/KompilatorCura.apk
+
+      - name: Vydanie (release) na stiahnutie do mobilu
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: apk-${{ github.run_number }}
+          name: Kompilátor Cura – APK ${{ github.run_number }}
+          make_latest: false
+          body: |
+            Stiahni `KompilatorCura.apk` do mobilu a nainštaluj (povoľ inštaláciu z neznámych zdrojov).
+            Aplikácia sa načítava z Vercelu – zmeny vzhľadu sa prejavia aj bez novej inštalácie.
+          files: mobile/KompilatorCura.apk

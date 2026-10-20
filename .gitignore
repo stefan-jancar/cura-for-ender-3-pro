@@ -1,0 +1,12 @@
+.venv/
+__pycache__/
+*.pyc
+.data/
+.scratch/
+build/
+dist/
+mobile/node_modules/
+mobile/android/
+mobile/capacitor.config.json
+*.spec
+.claude/

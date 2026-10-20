@@ -1,0 +1,11 @@
+-r requirements.txt
+numpy>=2.0
+scipy>=1.13
+trimesh>=4.5
+manifold3d>=3.0
+shapely>=2.0
+mapbox-earcut>=1.0
+networkx>=3.0
+uvicorn>=0.30
+pywebview>=5.0
+pyinstaller>=6.10
