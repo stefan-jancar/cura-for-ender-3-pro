@@ -10,3 +10,4 @@ mobile/android/
 mobile/capacitor.config.json
 *.spec
 .claude/
+industrial-stand_Ender3Pro/
